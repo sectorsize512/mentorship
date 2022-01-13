@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "genfast22_csv.py",
+            "type": "python",
+            "request": "launch",
+            "program": "genfast22_csv.py",
+            "args": ["mentee.csv", "mentor.csv"],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "mentee_mentor.py",
+            "type": "python",
+            "request": "launch",
+            "program": "mentee_mentor.py",
+            "args": ["10", "mentee.csv", "mentor.csv"],
+            "console": "integratedTerminal"
+        }
+    ]
+}
