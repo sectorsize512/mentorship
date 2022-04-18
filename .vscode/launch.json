@@ -17,7 +17,7 @@
             "type": "python",
             "request": "launch",
             "program": "mentee_mentor.py",
-            "args": ["10", "mentee.csv", "mentor.csv"],
+            "args": ["-n", "10000", "-f", "mentee.csv", "-f1", "mentor.csv", "-v"],
             "console": "integratedTerminal"
         }
     ]

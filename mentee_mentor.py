@@ -1,104 +1,96 @@
 import csv
-import random
 import sys
 from sys import argv
 import argparse
+#import data_visual
+import mentee_mentor_class
+import random
+import copy
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('-n', dest="count", default=10000, type=int, help = 'number of attempts, default 10000')
+parser.add_argument('-f', '--menteefile', help = 'csv file mentee')
+parser.add_argument('-f1', '--mentorfile', help = 'csv file mentor')
+parser.add_argument ('-v', action='store_const', const=True, help='Set if virtual or in-person visits are to be counted')
+argv = parser.parse_args()
 
 
-
-
-def create_mentee_lst(csvfile):
-    all_mentees_lst = []
-    mentee_topicmail_dct = {}
+with open(argv.menteefile, newline = '') as csvfile:
     mentees_reader = csv.reader(csvfile)
     next(mentees_reader)
+    mentee_dct = {}
     for row in mentees_reader:
-        all_mentees_lst.append(row[2])
-        mentee_topicmail_dct[row[2]] = (row[6], row[1], row[7])
+        mentee = mentee_mentor_class.Mentee.parse_mentee(row)
+        mentee_dct[mentee.fullname] = mentee
 
-
-    return all_mentees_lst, mentee_topicmail_dct
-
-def create_mentor_lst(csvfile):
-    all_mentors_lst = []
-    mentor_topicmail_dct = {}
-    count_mentee_dct = {}
+with open(argv.mentorfile, newline = '') as csvfile:
     mentors_reader = csv.reader(csvfile)
     next(mentors_reader)
+    mentor_dct = {}
     for row in mentors_reader:
-        all_mentors_lst.append(row[2])
-        mentor_topicmail_dct[row[2]] = row[6], row[1], row[8]
-        count_mentee_dct[row[2]] = int(row[7])
+        mentor = mentee_mentor_class.Mentor.parse_mentor(row)
+        mentor_dct[mentor.fullname] = mentor
 
-    return all_mentors_lst, mentor_topicmail_dct, count_mentee_dct
-
-
-def create_mentee_mentor_dct(all_mentees, all_mentors):
-    new_all_mentors = all_mentors.copy()
+def create_mentee_mentor_dct(mentor_dct, mentee_dct):
+    new_mentee_dct = copy.deepcopy(mentee_dct)
+    new_mentor_dct = copy.deepcopy(mentor_dct)
     mentee_mentor_dct = {}
-    for mentee in all_mentees:
-            rand_mentor = random.choice(new_all_mentors)
-            mentee_mentor_dct[mentee] = rand_mentor
-            count_mentee_dct[rand_mentor] = count_mentee_dct[rand_mentor] - 1
-            if count_mentee_dct[rand_mentor] == 0:
-                new_all_mentors.remove(rand_mentor)
-                if len(new_all_mentors) == 0:
+    for mentee in mentee_dct:
+        rand_mentor = random.choice(list(new_mentor_dct.items()))[0]
+        mentee_mentor_dct[mentee] = rand_mentor
+        new_mentor_dct[rand_mentor].numb_students_to_mentor = new_mentor_dct[rand_mentor].numb_students_to_mentor - 1
+        del new_mentee_dct[mentee]
 
-                    return None, all_mentees[all_mentees.index(mentee):len(all_mentees)], "  "
+        if new_mentor_dct[rand_mentor].numb_students_to_mentor == 0:
+            del new_mentor_dct[rand_mentor]
 
+        if len(new_mentor_dct) == 0:
+            notcovered_mentee = list(new_mentee_dct.keys())
+            return None, notcovered_mentee, "  "
 
     return " ", " ", mentee_mentor_dct
 
 def  number_coincid_interests(mentee_mentor_dct):
     number_coincid = 0
+    mentee_mentor_coincid_dct = {}
     for mentee, mentor  in mentee_mentor_dct.items():
+        for mentee_topic in mentee_dct[mentee].techtopicsinterest .split(';'):
+            for mentor_topic in mentor_dct[mentor].techtopicsinterest .split(';'):
 
-            for topic_mentor in mentor_topicmail_dct[mentor][0].split(';'):
-
-                for topic_mentee in mentee_topicmail_dct[mentee][0].split(';'):
-                       if topic_mentor == topic_mentee and mentee_topicmail_dct[mentee][2] == mentor_topicmail_dct[mentor][2]:
+                if argv.v == True:
+                    if mentee_topic == mentor_topic and mentee_dct[mentee].virtperson == mentor_dct[mentor].virtperson:
                         number_coincid += 1
+                        mentee_mentor_coincid_dct[mentee] = mentor
+                else:
+                    if mentee_topic == mentor_topic:
+                        number_coincid += 1
+                        mentee_mentor_coincid_dct[mentee] = mentor
 
-                        
-                        
-    
-    return  number_coincid
-
-parser = argparse.ArgumentParser()
-
-parser.add_argument('-n', '--attempt', type = int, help = 'number of attempts')
-parser.add_argument('-f', '--menteefile', help = 'csv file mentee')
-parser.add_argument('-f1', '--mentorfile', help = 'csv file mentor')
-argv = parser.parse_args()
-
-    
-
-with open(argv.menteefile, newline = '') as csvfile:
-    all_mentees_lst, mentee_topicmail_dct = create_mentee_lst(csvfile)
-with open(argv.mentorfile, newline = '') as csvfile:
-    all_mentors_lst, mentor_topicmail_dct, count_mentee_dct = create_mentor_lst(csvfile)
+    return  number_coincid, mentee_mentor_coincid_dct
 
 optimal_coincidences = 0
-while argv.attempt != 0:
-    err, notcovered_mentee_lst, mentee_mentor_dct = create_mentee_mentor_dct(all_mentees_lst, all_mentors_lst)
+while argv.count != 0:
+    err, notcovered_mentee, mentee_mentor_dct = create_mentee_mentor_dct(mentor_dct, mentee_dct)
+
     if err == None:
-        sys.exit('NOT ENOUGH MENTORS!!!' + "REMAIN WITHOUT MENTORS: " +str(notcovered_mentee_lst))
-    number_coincid  = number_coincid_interests(mentee_mentor_dct)
+        sys.exit('NOT ENOUGH MENTORS!!!' + "REMAIN WITHOUT MENTORS: " + str(notcovered_mentee))
+    number_coincid, mentee_mentor_coincid_dct   = number_coincid_interests(mentee_mentor_dct)
+
     if number_coincid > optimal_coincidences:
         optimal_coincidences = number_coincid
-        optimal_dct = mentee_mentor_dct
-    argv.attempt -= 1
+        optimal_dct = mentee_mentor_coincid_dct        
+    argv.count -= 1
 
-print(optimal_coincidences)
-print(len(optimal_dct))
-print(optimal_dct)
 for pair in optimal_dct.items():
-    print("To:  " + mentee_topicmail_dct[pair[0]][1] + ";  " +  mentor_topicmail_dct[pair[1]][1])
+    print("To:  " + mentee_dct[pair[0]].interest_academindust + ";  " +  mentor_dct[pair[1]].username)
     print("CC:  " + "tarasov@vasily.name")
     print("Subject: FAST'22 Mentorship Program: Mentor and mentee assignment")
-    print("Dear " + pair[0] + " and " + pair[1] + ",")
+    print("Dear " + mentee_dct[pair[0]].fullname + " and " + mentor_dct[pair[1]].fullname + ",")
     print("Thank you for participating in FAST'22! You were assigned as a mentor-mentee pair. Please, schedule a time to meet with each other.")
     print("Mentorship Program Chair,")
     print("Vasily Tarasov")
     print()
     print()
+
+#data_visual.coincid_graph(optimal_dct, mentor_dct)
