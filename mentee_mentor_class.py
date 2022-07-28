@@ -1,12 +1,10 @@
-import sys
-import os
-import csv
-import random
+from datetime import datetime
+
 
 class Mentee:
 
   def __init__(self, timestamp, username, fullname, university, careerstage, interest_academindust, techtopicsinterest, virtperson):
-    self.timestamp = timestamp
+    self.timestamp = datetime.strptime(timestamp[:-4], "%Y/%m/%d %I:%M:%S %p")
     self.username = username
     self.fullname = fullname
     self.university = university
@@ -24,15 +22,15 @@ class Mentee:
     careerstage = row[4]
     interest_academindust = row[5]
     techtopicsinterest = row[6]
-    irtperson = row[7]
+    virtperson = row[7]
 
-    return Mentee(timestamp, username, fullname, university, careerstage, interest_academindust, techtopicsinterest, irtperson)
+    return Mentee(timestamp, username, fullname, university, careerstage, interest_academindust, techtopicsinterest, virtperson)
 
 
 class Mentor:
 
     def __init__(self, timestamp, username, fullname, affiliation, represent_academindust, techtopicsinterest, numb_students_to_mentor, virtperson):
-        self.timestamp = timestamp
+        self.timestamp = datetime.strptime(timestamp[:-4], "%Y/%m/%d %I:%M:%S %p")
         self.username = username
         self.fullname = fullname
         self.affiliation = affiliation
@@ -51,5 +49,5 @@ class Mentor:
         techtopicsinterest = row[5]
         numb_students_to_mentor = row[6]
         virtperson = row[7]
-    
+
         return Mentor(timestamp, username, fullname, affiliation, represent_academindust, techtopicsinterest, numb_students_to_mentor, virtperson)
