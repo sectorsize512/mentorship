@@ -9,10 +9,10 @@ class Mentee:
     self.fullname = fullname
     self.university = university
     self.careerstage = careerstage
-    self.interest_academindust = interest_academindust
-    self.techtopicsinterest = techtopicsinterest
+    self.interest_academindust = interest_academindust.split(';')
+    self.techtopicsinterest = techtopicsinterest .split(';')
     self.virtperson = virtperson
-
+    
   @classmethod
   def parse_mentee(cls, row):
     timestamp = row[0]
@@ -35,7 +35,7 @@ class Mentor:
         self.fullname = fullname
         self.affiliation = affiliation
         self.represent_academindust = represent_academindust
-        self.techtopicsinterest = techtopicsinterest
+        self.techtopicsinterest = techtopicsinterest.split(';')
         self.numb_students_to_mentor = int(numb_students_to_mentor)
         self.virtperson = virtperson
 

@@ -27,58 +27,55 @@ def create_mentee_mentor_dct(mentor_dct, mentee_dct):
     
     return None, mentee_mentor_dct
 
-def  number_coincid_interests(mentee_mentor_dct):
+
+def  compute_rating(mentee_mentor_dct):
     
-    mentee_mentor_coincid_dct = {}
-    
+    mentee_mentor_coincid_dct = copy.deepcopy(mentee_mentor_dct)
     for mentee, mentor  in mentee_mentor_dct.items():
-                  
-          
-##      topic match
-               
-        topic_Flag = False
-        for mentee_topic in mentee_dct[mentee].techtopicsinterest .split(';'):             
-            for mentor_topic in mentor_dct[mentor].techtopicsinterest .split(';'):
                 
-                if mentee_topic == mentor_topic:
-                       
-                        mentee_mentor_coincid_dct[mentee] = [mentor, '*']
+##      topic match
+        if argv.matching_on_topic == True:                 
+            topic_Flag = False
+            for mentee_topic in mentee_dct[mentee].techtopicsinterest:             
+                for mentor_topic in mentor_dct[mentor].techtopicsinterest:
+                   
+                    if mentee_topic == mentor_topic:
+                                
                         topic_Flag = True
-                        break
-           
-            if topic_Flag == True:
-                break
-            else:
-                if argv.t == None:
-                    mentee_mentor_coincid_dct[mentee] = [mentor, ' ']
-            
+                        break           
+                if topic_Flag == True:
+                   
+                    break
+            if topic_Flag == False:
                      
-        # way of visiting conference
-        if argv.v == True:
-                if mentee in mentee_mentor_coincid_dct:        
+                del mentee_mentor_coincid_dct[mentee]
+           
+#       way of visiting conference
+
+        if argv.accept_virtperson_visits == True:            
+            if mentee in mentee_mentor_coincid_dct:        
                     if mentee_dct[mentee].virtperson != mentor_dct[mentor].virtperson:
                         del mentee_mentor_coincid_dct[mentee]
-                   
-                  
-        # academy/industry match
-        if argv.r == True:
-               
-                if mentee in mentee_mentor_coincid_dct:
+                        
+#       no match institution 
+      
+        if argv.mentormentee_different_institution == True:
+            if mentor_dct[mentor].represent_academindust == 'Academia':
+                if mentee in mentee_mentor_coincid_dct:        
+                    if mentee_dct[mentee].university == mentor_dct[mentor].affiliation:
+                                          
+                        del mentee_mentor_coincid_dct[mentee]
+                            
+#       academy/industry match
+        if argv.academic_industry_preference == True:
                           
-                    if mentor_dct[mentor].represent_academindust not in  mentee_dct[mentee].interest_academindust.split(';'):
-                       
-                        del mentee_mentor_coincid_dct[mentee]                
-                    
-        # no match institution       
-        if argv.u == True and mentor_dct[mentor].represent_academindust == 'Academia':
-                    if mentee in mentee_mentor_coincid_dct:        
-                        if mentee_dct[mentee].university == mentor_dct[mentor].affiliation:
-                            del mentee_mentor_coincid_dct[mentee]
-                              
-    number_coincid = len(mentee_mentor_coincid_dct)
-    
-    return  number_coincid, mentee_mentor_coincid_dct
-
+            if mentee in mentee_mentor_coincid_dct:                          
+                    if mentor_dct[mentor].represent_academindust not in  mentee_dct[mentee].interest_academindust:                       
+                        del mentee_mentor_coincid_dct[mentee]                            
+                                                                    
+         
+    rating = len(mentee_mentor_coincid_dct)
+    return  rating
 
 
 parser = argparse.ArgumentParser()
@@ -86,10 +83,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-n', dest="count", default=10000, type=int, help = 'number of attempts, default 10000')
 parser.add_argument('-f_mentee', '--menteefile', help = 'csv file mentee')
 parser.add_argument('-f_mentor', '--mentorfile', help = 'csv file mentor')
-parser.add_argument ('-t', action='store_const', const=True, help='Implement matching based on topic of interest')
-parser.add_argument ('-v', action='store_const', const=True, help='Set if virtual or in-person visits are to be counted')
-parser.add_argument ('-r', action='store_const', const=True, help='Implement matching based on academy/industry preference')
-parser.add_argument ('-u', action='store_const', const=True, help='Do not match mentors and mentees that are from the same institution')
+parser.add_argument ('-t', '--matching_on_topic', action='store_const', const=True, help='Implement matching based on topic of interest')
+parser.add_argument ('-v', '--accept_virtperson_visits', action='store_const', const=True, help='Set if virtual or in-person visits are to be counted')
+parser.add_argument ('-r', '--academic_industry_preference', action='store_const', const=True, help='Implement matching based on academy/industry preference')
+parser.add_argument ('-u', '--mentormentee_different_institution', action='store_const', const=True, help='Do not match mentors and mentees that are from the same institution')
+parser.add_argument ('-all_mentor', action='store_const', const=True, help='Support the mode where every mentor gets at least one menteeSupport the mode where every mentor gets at least one mentee')
 argv = parser.parse_args()
 
 
@@ -113,44 +111,37 @@ with open(argv.mentorfile, newline = '') as csvfile:
 
 
 
-optimal_coincidences = 0
-number_attempts = argv.count
-while number_attempts != 0:
+optimal_rating = 0
+while argv.count != 0:
    
 
     notcovered_mentee, mentee_mentor_dct = create_mentee_mentor_dct(mentor_dct, mentee_dct)
     if notcovered_mentee != None:
 
-        sys.exit('NOT ENOUGH MENTORS!!!' + "REMAIN WITHOUT MENTORS: " + str(notcovered_mentee))
-
-    #if number_coincid_interests(mentee_mentor_dct) == 'Dictionary is unsuccessful':      
-        #print(111)
-        #number_attempts -= 1
-        #continue
+        sys.exit('NOT ENOUGH MENTORS!!!' + "REMAIN WITHOUT MENTORS: " + str(notcovered_mentee))  
         
-    #else:
-    number_coincid, mentee_mentor_coincid_dct = number_coincid_interests(mentee_mentor_dct)
+   
+    rating = compute_rating(mentee_mentor_dct)
+    if rating >= optimal_rating:
+        optimal_rating = rating
+        optimal_menteementor_dct = mentee_mentor_dct
+   
+    argv.count -= 1  
 
-    if number_coincid > optimal_coincidences:
-        optimal_coincidences = number_coincid
-        optimal_dct = mentee_mentor_coincid_dct
-  
-    number_attempts -= 1  
 
 
-mentor_without_mentee_dct = copy.deepcopy(mentor_dct)
-mentee_without_mentor_dct = copy.deepcopy(mentee_dct)
+#mentors_unclaimed_slots_dct = copy.deepcopy(mentor_dct)
+#mentee_without_mentor_dct = copy.deepcopy(mentee_dct)
 
-for mentee, mentor in optimal_dct.items():
-    del mentee_without_mentor_dct[mentee]
+#for mentee, mentor in optimal_dct.items():    
+     
+#     del mentee_without_mentor_dct[mentee]
     
-    mentor_without_mentee_dct[mentor[0]].numb_students_to_mentor = mentor_without_mentee_dct[mentor[0]].numb_students_to_mentor - 1
-    if mentor_without_mentee_dct[mentor[0]].numb_students_to_mentor == 0:
-            del mentor_without_mentee_dct[mentor[0]]
-    
-#print(mentee_without_mentor_dct)
-#print(mentor_without_mentee_dct)
-create_mentee_mentor_dct(mentor_without_mentee_dct, mentee_without_mentor_dct,)
+#     mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor = mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor - 1
+#     if mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor == 0:
+#        del mentors_unclaimed_slots_dct[mentor[0]]
+
+            
 
   
 #for pair in optimal_dct.items():
@@ -165,7 +156,7 @@ create_mentee_mentor_dct(mentor_without_mentee_dct, mentee_without_mentor_dct,)
 #    print()
 
 
-#table.table(optimal_dct, mentee_dct, mentor_dct)
-table.table_opt(optimal_dct, mentee_dct, mentor_dct)
-table.table_unclaimed_mentors(mentor_without_mentee_dct)
-table.table_menteewithoutmentor(mentee_without_mentor_dct)
+
+table.table_opt(optimal_menteementor_dct, mentee_dct, mentor_dct)
+#table.table_unclaimed_mentors(mentors_unclaimed_slots_dct)
+#table.table_menteewithoutmentor(mentee_without_mentor_dct)  
