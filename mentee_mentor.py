@@ -8,8 +8,6 @@ import table
 import random
 import copy
 
-print("DFSDF")
-
 def create_mentee_mentor_dct(mentee_dct, mentor_dct):
     new_mentee_dct = copy.deepcopy(mentee_dct)
     new_mentor_dct = copy.deepcopy(mentor_dct)
