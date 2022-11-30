@@ -10,6 +10,7 @@ import copy
 
 
 def create_mentee_mentor_dct(mentee_dct, mentor_dct):
+
     new_mentee_dct = copy.deepcopy(mentee_dct)
     new_mentor_dct = copy.deepcopy(mentor_dct)
     mentee_mentor_dct = {}
@@ -27,6 +28,8 @@ def create_mentee_mentor_dct(mentee_dct, mentor_dct):
             return notcovered_mentee, None
 
     return None, mentee_mentor_dct
+
+#  mentor_dct, mentee_dct   - global
 
 def  compute_rating(mentee_mentor_dct):
     unclaimed_mentors = copy.deepcopy(mentor_dct)
@@ -74,8 +77,8 @@ def  compute_rating(mentee_mentor_dct):
                         del mentee_mentor_coincid_dct[mentee]
 
 #       consider previous mentoring
-        if argv.consid_prev_mentor == True:                
-             if (mentee, mentor) in menteementor_dct.items():
+        if argv.consid_prev_mentor == True:
+             if (mentee, mentor) in mentee_mentor_prev_dct.items():
                del mentee_mentor_coincid_dct[mentee]
 
 #   all mentors are involved
@@ -86,23 +89,24 @@ def  compute_rating(mentee_mentor_dct):
     rating = len(mentee_mentor_coincid_dct)
     return  rating
 
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('-n', dest = "count", default = 10000, type = int, help = 'number of attempts, default 10000')
 
-parser.add_argument('-F', '--menteementorfile', help = 'csv file from previous conference')
+parser.add_argument('-F', '--prev_file', help = 'csv file from previous conference')
+#parser.add_argument('-L', '--menteelatefile', help = 'csv file late mentee')
 parser.add_argument ('-t', '--matching_on_topic', action = 'store_const', const = True, help = 'Implement matching based on topic of interest')
 parser.add_argument ('-v', '--accept_virtperson_visits', action ='store_const', const = True, help = 'Set if virtual or in-person visits are to be counted')
 parser.add_argument ('-r', '--academic_industry_preference', action = 'store_const', const = True, help = 'Implement matching based on academy/industry preference')
 parser.add_argument ('-u', '--mentormentee_different_institution', action = 'store_const', const = True, help = 'Do not match mentors and mentees that are from the same institution')
 parser.add_argument ('-a', '--all_mentors', action ='store_const', const = True, help = 'Support the mode where every mentor gets at least one mentee')
 parser.add_argument ('-p', '--consid_prev_mentor', action = 'store_const', const = True, help ='Consider previous mentoring')
-parser.add_argument('-m', '--menteefile', required = True, help = 'csv file mentee')
+parser.add_argument ('-l', '--late_mentee', action = 'store_const', const = True, help ='Possibility to add more mentee without changing existing pairs')
+parser.add_argument('-m', '--menteefile', required = True, help = 'csv file mentee' or 'csv file mentee with latecomers mentee')
 parser.add_argument('-M', '--mentorfile', required = True, help = 'csv file mentor')
 parser.add_argument('-T', '--tablefile', required = True, help = 'csv file, where to save the output table')
 argv = parser.parse_args()
-
-
 
 with open(argv.menteefile, newline = '') as csvfile:
     mentees_reader = csv.reader(csvfile)
@@ -120,20 +124,40 @@ with open(argv.mentorfile, newline = '') as csvfile:
         mentor = mentee_mentor_class.Mentor.parse_mentor(row)
         mentor_dct[mentor.fullname] = mentor
 
-if argv.consid_prev_mentor == True: 
-    with open(argv.menteementorfile, newline = '') as csvfile:        
-        menteementor_reader = csv.reader(csvfile)
-        next(menteementor_reader)
-        menteementor_dct = {}
-        for row in menteementor_reader:
-            mentee = row[0].split(';')[0]
-            mentor = row[0].split(';')[1]            
-            menteementor_dct[mentee] = mentor
+if argv.prev_file is not None:
+        with open(argv.prev_file, newline = '') as csvfile:
+            menteementor_reader = csv.reader(csvfile)
+            next(menteementor_reader)
+            mentee_mentor_prev_dct = {}
+            for row in menteementor_reader:
+                mentee = row[0].split(';')[0]
+                mentor = row[0].split(';')[1]
+                mentee_mentor_prev_dct[mentee] = mentor
+
+if argv.late_mentee is not None:
+    late_mentee_dct = {}                              ### forming a dictionary of latecomers mentee
+    for key, values in mentee_dct.items():
+        if key in mentee_mentor_prev_dct:
+            continue
+        else:
+            late_mentee_dct[key] = values
+
+    mentors_unclaimed_slots_dct = copy.deepcopy(mentor_dct)     ### forming a mentor dictionary with available slots
+    for mentee, mentor in mentee_mentor_prev_dct.items():   
+        if mentor in mentors_unclaimed_slots_dct:
+            mentors_unclaimed_slots_dct[mentor].numb_students_to_mentor = mentors_unclaimed_slots_dct[mentor].numb_students_to_mentor - 1
+
+            if mentors_unclaimed_slots_dct[mentor].numb_students_to_mentor == 0:
+                del mentors_unclaimed_slots_dct[mentor]
+
 
 optimal_rating = 0
 while argv.count != 0:
 
-    notcovered_mentee, mentee_mentor_dct = create_mentee_mentor_dct(mentee_dct, mentor_dct)
+    if argv.late_mentee is not None:
+        notcovered_mentee, mentee_mentor_dct = create_mentee_mentor_dct(late_mentee_dct, mentors_unclaimed_slots_dct)
+    else:
+        notcovered_mentee, mentee_mentor_dct = create_mentee_mentor_dct(mentee_dct, mentor_dct)
     if notcovered_mentee != None:
 
         sys.exit('NOT ENOUGH MENTORS!!!' + "REMAIN WITHOUT MENTORS: " + str(notcovered_mentee))
@@ -146,18 +170,8 @@ while argv.count != 0:
 
     argv.count -= 1
 
-
-
-#mentors_unclaimed_slots_dct = copy.deepcopy(mentor_dct)
-#mentee_without_mentor_dct = copy.deepcopy(mentee_dct)
-
-#for mentee, mentor in optimal_dct.items():
-
-#     del mentee_without_mentor_dct[mentee]
-
-#     mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor = mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor - 1
-#     if mentors_unclaimed_slots_dct[mentor[0]].numb_students_to_mentor == 0:
-#        del mentors_unclaimed_slots_dct[mentor[0]
+    if argv.late_mentee is not None:
+        optimal_menteementor_dct.update(mentee_mentor_prev_dct)
 
 
 #for pair in optimal_dct.items():
